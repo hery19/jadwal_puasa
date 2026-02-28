@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramadan Dashboard Pro</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center p-6 font-sans">
+
+    <header class="text-center mb-8 w-full max-w-md">
+        <div class="bg-emerald-600/20 py-3 px-6 rounded-2xl border border-emerald-500/30 inline-block mb-4">
+            <p id="hijri-date" class="text-xl font-bold text-emerald-400 italic">Mencari Lokasi...</p>
+            <p id="masehi-date" class="text-xs text-slate-400 mt-1 uppercase tracking-tighter"></p>
+        </div>
+    </header>
+
+    <div class="glass-card p-10 rounded-[40px] shadow-2xl w-full max-w-md text-center mb-8">
+        <h2 class="text-slate-400 text-sm mb-2 uppercase tracking-widest">Waktu Sekarang</h2>
+        <div class="text-6xl font-black text-white tracking-tight mb-2" id="clock">00:00:00</div>
+        <div class="h-1 w-20 bg-emerald-500 mx-auto rounded-full"></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 w-full max-w-md">
+        <div class="glass-card p-5 rounded-3xl text-center border-l-4 border-blue-500">
+            <i data-lucide="utensils" class="mx-auto mb-3 text-blue-400"></i>
+            <p class="text-[10px] text-slate-500 font-bold uppercase">Sahur (Imsak)</p>
+            <p class="text-3xl font-bold" id="waktu-sahur">--:--</p>
+            <button onclick="playTest('tahrim')" class="mt-3 text-[10px] bg-blue-900/40 p-2 rounded-full border border-blue-500/30">🔊 Test Tahrim</button>
+        </div>
+
+        <div class="glass-card p-5 rounded-3xl text-center border-l-4 border-orange-500">
+            <i data-lucide="sunset" class="mx-auto mb-3 text-orange-400"></i>
+            <p class="text-[10px] text-slate-500 font-bold uppercase">Buka (Maghrib)</p>
+            <p class="text-3xl font-bold" id="waktu-buka">--:--</p>
+            <button onclick="playTest('azan')" class="mt-3 text-[10px] bg-orange-900/40 p-2 rounded-full border border-orange-500/30">🔊 Test Azan</button>
+        </div>
+    </div>
+
+    <audio id="audio-azan" src="https://www.islamcan.com/common/azan/azan1.mp3"></audio>
+    <audio id="audio-tahrim" src="https://files.catbox.moe/k3f4o4.mp3"></audio>
+
+    <script>
+        lucide.createIcons();
+
+        let jadwalSahur = "";
+        let jadwalBuka = "";
+
+        function initApp() {
+            if (navigator.geolocation) {
+                document.getElementById('hijri-date').innerText = "Mencari Lokasi...";
+                navigator.geolocation.getCurrentPosition(fetchDataByCoords, handleError);
+            } else {
+                alert("Maaf, Browser/HP Anda tidak mendukung GPS.");
+                fetchDataByCity("Jakarta");
+            }
+        }
+
+        async function fetchDataByCoords(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            try {
+                const res = await fetch(`https://api.aladhan.com/v1/timingsByAddress?address=${lat},${lng}&method=11`);
+                const json = await res.json();
+                updateUI(json.data);
+            } catch (err) {
+                console.error("Gagal ambil data", err);
+            }
+        }
+
+        function updateUI(d) {
+            const t = d.timings;
+            const h = d.date.hijri;
+            document.getElementById('hijri-date').innerText = `${h.day} ${h.month.en} ${h.year} H`;
+            document.getElementById('masehi-date').innerText = d.date.readable + " (Lokasi Otomatis)";
+            jadwalSahur = t.Imsak;
+            jadwalBuka = t.Maghrib;
+            document.getElementById('waktu-sahur').innerText = t.Imsak;
+            document.getElementById('waktu-buka').innerText = t.Maghrib;
+        }
+
+        function handleError(error) {
+            alert("Akses lokasi ditolak. Menggunakan lokasi default (Jakarta).");
+            fetchDataByCity("Jakarta");
+        }
+
+        async function fetchDataByCity(city) {
+            const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=Indonesia&method=11`);
+            const json = await res.json();
+            updateUI(json.data);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const currentTimeStr = `${h}:${m}`;
+            
+            document.getElementById('clock').innerText = `${h}:${m}:${s}`;
+
+            if (s === "00") {
+                if (currentTimeStr === jadwalBuka) playAudio('azan');
+                if (currentTimeStr === jadwalSahur) playAudio('tahrim');
+            }
+        }
+
+        function playAudio(tipe) {
+            const audio = document.getElementById(tipe === 'azan' ? 'audio-azan' : 'audio-tahrim');
+            audio.play().catch(e => console.log("Perlu interaksi user untuk suara pertama kali."));
+        }
+
+        function playTest(tipe) {
+            playAudio(tipe);
+            alert("Test suara " + tipe + " dimulai!");
+        }
+
+        initApp();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

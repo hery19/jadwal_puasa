@@ -1,0 +1,15 @@
+{
+  "name": "Pengingat Puasa & Sahur",
+  "short_name": "PuasaApp",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2233/2233859.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
